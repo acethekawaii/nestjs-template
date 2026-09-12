@@ -1,0 +1,12 @@
+allowBuilds:
+  '@parcel/watcher': true
+  '@prisma/engines': true
+  bcrypt: true
+  prisma: true
+  unrs-resolver: true
+overrides:
+  body-parser: ^2.3.0
+  multer: ^2.3.0
+  qs: ^6.16.0
+minimumReleaseAgeExclude:
+  - zod@4.6.2
