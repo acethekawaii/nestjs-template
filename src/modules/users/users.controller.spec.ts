@@ -1,13 +1,25 @@
 import { NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 
+import type { Auth } from '../auth/auth';
+import type { UserSession } from '@thallesp/nestjs-better-auth';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
+
+type OrganizationSession = UserSession<Auth> & {
+  session: {
+    activeOrganizationId: string;
+  };
+};
 
 describe('UsersController', () => {
   const getUser = jest.fn<UsersService['getUser']>();
 
   let controller: UsersController;
+
+  const session = {
+    session: { activeOrganizationId: 'organization-a' },
+  } as OrganizationSession;
 
   beforeEach(async () => {
     getUser.mockReset();
@@ -25,11 +37,12 @@ describe('UsersController', () => {
     controller = module.get(UsersController);
   });
 
-  it('returns not found when the user does not exist', async () => {
+  it('returns not found for users outside the active organization', async () => {
     getUser.mockResolvedValue(null);
 
-    await expect(
-      controller.getUser('92b3b9dd-a55c-4e05-af32-c1991ed5e0ee'),
-    ).rejects.toBeInstanceOf(NotFoundException);
+    await expect(controller.getUser('user-b', session)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    expect(getUser).toHaveBeenCalledWith('organization-a', 'user-b');
   });
 });

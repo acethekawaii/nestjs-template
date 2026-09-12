@@ -1,8 +1,10 @@
 import { Controller, Get } from '@nestjs/common';
 import { HealthCheck, type HealthCheckResult, HealthCheckService, PrismaHealthIndicator } from '@nestjs/terminus';
 import { SkipThrottle } from '@nestjs/throttler';
+import { AllowAnonymous } from '@thallesp/nestjs-better-auth';
 import { PrismaService } from '../database/prisma.service';
 
+@AllowAnonymous()
 @SkipThrottle()
 @Controller('health')
 export class HealthController {

@@ -4,10 +4,10 @@ This file is the canonical repository guidance for coding agents. Tool-specific 
 
 ## Stack
 
-- Node.js and pnpm 12
+- Node.js 22.22.1 or newer and pnpm 12
 - NestJS 11 and TypeScript 5
 - PostgreSQL and Prisma 7
-- Passport JWT authentication
+- Better Auth with the organization plugin
 - Jest 30 and ESLint 10
 
 ## Repository Map
@@ -17,7 +17,6 @@ This file is the canonical repository guidance for coding agents. Tool-specific 
 - `src/common`: shared transport concerns with no feature-specific business logic
 - `prisma/schema.prisma`: database model
 - `prisma/migrations`: committed, append-only migration history
-- `prisma/seed.ts`: local bootstrap data
 - `test`: HTTP-level tests
 
 ## Package Management
@@ -32,7 +31,7 @@ This file is the canonical repository guidance for coding agents. Tool-specific 
 
 - Organize code by feature.
 - Keep controllers thin. Put business rules in services.
-- Use the injected `PrismaService`; do not create feature-local Prisma clients.
+- Reuse the shared `PrismaService` singleton in Better Auth and inject it everywhere else.
 - Reuse existing modules and patterns before adding abstractions.
 - Avoid blanket try-catch blocks. Nest exception handling owns transport errors.
 - Make clean cutovers. Update every caller and remove obsolete paths.
@@ -49,12 +48,13 @@ This file is the canonical repository guidance for coding agents. Tool-specific 
 
 ## Authentication Invariants
 
-- Login is public. Protected routes use `PassportJwtGuard`.
-- JWT payloads contain only the user identifier in `sub`.
-- JWT validation reloads the current safe user from the database for every request.
-- Reject archived users during credential validation and JWT validation.
-- Never return, log, or encode password hashes.
-- Do not add public registration unless the feature explicitly requires it.
+- Better Auth owns email and password authentication under `/api/v1/auth`.
+- The Better Auth integration guard is global. Mark public Nest routes with `@AllowAnonymous()`.
+- Browser authentication uses HTTP-only session cookies.
+- Users can belong to one organization. Hooks reject extra memberships and `Member.userId` stays unique.
+- Organization-scoped controllers require `@OrgRoles()` or `@MemberHasPermission()`.
+- Scope every tenant query by the authenticated session's `activeOrganizationId`.
+- Never return or log account password hashes. Never log session tokens.
 
 ## Prisma Rules
 
@@ -62,7 +62,6 @@ This file is the canonical repository guidance for coding agents. Tool-specific 
 - Create a new migration for schema changes. Never rewrite an applied migration.
 - Regenerate Prisma Client after schema changes.
 - Use explicit safe selections when a model contains sensitive fields.
-- Never run the development seed against production.
 - Use `prisma migrate dev` locally and `prisma migrate deploy` in deployments.
 
 ## Verification
@@ -71,7 +70,7 @@ Use the smallest relevant check while editing. Before completion, run the applic
 
 ```bash
 pnpm exec prisma validate
-pnpm exec eslint "src/**/*.ts" "test/**/*.ts" "prisma/**/*.ts" prisma.config.ts
+pnpm exec eslint "src/**/*.ts" "test/**/*.ts" prisma.config.ts
 pnpm exec tsc -p tsconfig.build.json --noEmit
 pnpm test --runInBand
 ```

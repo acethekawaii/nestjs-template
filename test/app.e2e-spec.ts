@@ -1,29 +1,45 @@
+import { INestApplication, VersioningType } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
-import { AppModule } from './../src/app.module';
 
-describe('AppController (e2e)', () => {
+import { AppModule } from '../src/app.module';
+import { PrismaService } from '../src/core/database/prisma.service';
+
+describe('Application authentication (e2e)', () => {
   let app: INestApplication<App>;
 
-  beforeEach(async () => {
+  beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(PrismaService)
+      .useValue({})
+      .compile();
 
-    app = moduleFixture.createNestApplication();
+    app = moduleFixture.createNestApplication({
+      bodyParser: false,
+    });
+    app.setGlobalPrefix('api');
+    app.enableVersioning({
+      type: VersioningType.URI,
+      defaultVersion: '1',
+    });
     await app.init();
   });
 
-  it('/ (GET)', () => {
-    return request(app.getHttpServer())
-      .get('/')
+  it('allows explicitly anonymous routes', async () => {
+    await request(app.getHttpServer())
+      .get('/api/v1')
       .expect(200)
       .expect('Hello World!');
   });
 
-  afterEach(async () => {
+  it('rejects unauthenticated protected routes', async () => {
+    await request(app.getHttpServer()).get('/api/v1/users').expect(401);
+  });
+
+  afterAll(async () => {
     await app.close();
   });
 });

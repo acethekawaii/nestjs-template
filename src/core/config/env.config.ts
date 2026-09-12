@@ -12,7 +12,8 @@ const schema = z.object({
     .default('http://localhost:4200')
     .transform((s) => s.split(',').map((o) => o.trim()).filter(Boolean)),
 
-  JWT_SECRET: z.string().min(32),
+  BETTER_AUTH_SECRET: z.string().min(32),
+  BETTER_AUTH_URL: z.url(),
 });
 
 const parsed = schema.safeParse(process.env);

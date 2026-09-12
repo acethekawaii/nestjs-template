@@ -1,3 +1,12 @@
 import type { User } from '@prisma/client';
 
-export type SafeUser = Omit<User, 'password'>;
+export type OrganizationUser = Pick<
+  User,
+  | 'id'
+  | 'name'
+  | 'email'
+  | 'emailVerified'
+  | 'image'
+  | 'createdAt'
+  | 'updatedAt'
+>;

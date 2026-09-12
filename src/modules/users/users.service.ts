@@ -1,46 +1,47 @@
-import { ConflictException, Injectable } from '@nestjs/common';
-import * as bcrypt from 'bcrypt';
+import { Injectable } from '@nestjs/common';
+import type { Prisma } from '@prisma/client';
 
 import { PrismaService } from '../../core/database/prisma.service';
-import { CreateUserDTO } from './dto/create-user.dto';
-import { User } from '@prisma/client';
-import type { SafeUser } from './types/users.types';
+import type { OrganizationUser } from './types/users.types';
+
+const ORGANIZATION_USER_SELECT = {
+  id: true,
+  name: true,
+  email: true,
+  emailVerified: true,
+  image: true,
+  createdAt: true,
+  updatedAt: true,
+} satisfies Prisma.UserSelect;
 
 @Injectable()
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async createUser(createUserDTO: CreateUserDTO): Promise<SafeUser> {
-    const email = createUserDTO.email.trim().toLowerCase();
-
-    const existing = await this.prisma.user.findUnique({ where: { email } });
-    if (existing) throw new ConflictException('Email already in use');
-
-    return this.prisma.user.create({
-      data: {
-        ...createUserDTO,
-        email,
-        password: await bcrypt.hash(createUserDTO.password, 10),
+  getAllUsers(organizationId: string): Promise<OrganizationUser[]> {
+    return this.prisma.user.findMany({
+      where: {
+        members: {
+          some: { organizationId },
+        },
       },
-      omit: { password: true },
+      select: ORGANIZATION_USER_SELECT,
+      orderBy: { createdAt: 'asc' },
     });
   }
 
-  getAllUsers(): Promise<SafeUser[]> {
-    return this.prisma.user.findMany({ omit: { password: true } });
-  }
-
-  getUserByEmail(email: string): Promise<User | null> {
-    return this.prisma.user.findUnique({
-      where: { email: email.trim().toLowerCase() },
+  getUser(
+    organizationId: string,
+    id: string,
+  ): Promise<OrganizationUser | null> {
+    return this.prisma.user.findFirst({
+      where: {
+        id,
+        members: {
+          some: { organizationId },
+        },
+      },
+      select: ORGANIZATION_USER_SELECT,
     });
   }
-
-  getUser(id: string): Promise<SafeUser | null> {
-    return this.prisma.user.findUnique({
-      where: { id },
-      omit: { password: true },
-    });
-  }
-
 }
